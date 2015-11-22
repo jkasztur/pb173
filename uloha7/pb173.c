@@ -110,12 +110,12 @@ static void my_exit(void)
 	while((pdev = pci_get_device(PCI_ANY_ID, PCI_ANY_ID, pdev)))
 	{
 		if(compare_with_my_list(pdev) == 0)
-			pr_info("%u : %u -added \n", pdev->vendor, pdev->device);
+			pr_info("%2.x : %2.x -added \n", pdev->vendor, pdev->device);
 	}
 	list_for_each_entry(temp_my_list, &my_head, list)
 	{
 		if(compare_with_system(temp_my_list->pdev) == 0)
-			pr_info("%u : %u -removed \n", temp_my_list->pdev->vendor, temp_my_list->pdev->device);
+			pr_info("%2.x : %2.x -removed \n", temp_my_list->pdev->vendor, temp_my_list->pdev->device);
 	}
 	temp = NULL;
 	list_for_each_entry(temp_my_list, &my_head, list)
@@ -130,7 +130,7 @@ static void my_exit(void)
 	pr_info("all devices:");
 	while((pdev = pci_get_device(PCI_ANY_ID, PCI_ANY_ID, pdev)))
 	{
-		pr_info("%u : %u  \n", pdev->vendor, pdev->device);
+		pr_info("%2.x : %2.x  \n", pdev->vendor, pdev->device);
 	}
 	pci_unregister_driver(&my_pci_driver);
 	pr_info("Removing module\n");

@@ -17,21 +17,21 @@ __attribute__((section(".gnu.linkonce.this_module"))) = {
 static const struct modversion_info ____versions[]
 __used
 __attribute__((section("__versions"))) = {
-	{ 0x151b2616, __VMLINUX_SYMBOL_STR(module_layout) },
-	{ 0x56199cbf, __VMLINUX_SYMBOL_STR(pci_unregister_driver) },
+	{ 0xfe2565c8, __VMLINUX_SYMBOL_STR(module_layout) },
+	{ 0x12ae4f02, __VMLINUX_SYMBOL_STR(pci_unregister_driver) },
 	{ 0x37a0cba, __VMLINUX_SYMBOL_STR(kfree) },
-	{ 0x3f31c15, __VMLINUX_SYMBOL_STR(pci_dev_put) },
-	{ 0x408e903b, __VMLINUX_SYMBOL_STR(__pci_register_driver) },
-	{ 0xc65f199a, __VMLINUX_SYMBOL_STR(pci_dev_get) },
-	{ 0xdd626e59, __VMLINUX_SYMBOL_STR(kmem_cache_alloc_trace) },
-	{ 0xbe84a3b9, __VMLINUX_SYMBOL_STR(kmalloc_caches) },
-	{ 0xbb5866a4, __VMLINUX_SYMBOL_STR(pci_get_device) },
-	{ 0xa5e4fa, __VMLINUX_SYMBOL_STR(pci_disable_device) },
-	{ 0xe1d8f494, __VMLINUX_SYMBOL_STR(pci_release_region) },
+	{ 0xa252482c, __VMLINUX_SYMBOL_STR(pci_dev_put) },
+	{ 0x97a6439a, __VMLINUX_SYMBOL_STR(__pci_register_driver) },
+	{ 0x753d46ee, __VMLINUX_SYMBOL_STR(pci_dev_get) },
+	{ 0x7ff88cb6, __VMLINUX_SYMBOL_STR(kmem_cache_alloc_trace) },
+	{ 0x67c6a176, __VMLINUX_SYMBOL_STR(kmalloc_caches) },
+	{ 0xed42c35d, __VMLINUX_SYMBOL_STR(pci_get_device) },
+	{ 0x4b98bcea, __VMLINUX_SYMBOL_STR(pci_disable_device) },
+	{ 0x6424699, __VMLINUX_SYMBOL_STR(pci_release_region) },
 	{ 0x27e1a049, __VMLINUX_SYMBOL_STR(printk) },
-	{ 0xd9ec4d06, __VMLINUX_SYMBOL_STR(pci_ioremap_bar) },
-	{ 0x37141b3b, __VMLINUX_SYMBOL_STR(pci_request_region) },
-	{ 0x6d35ca54, __VMLINUX_SYMBOL_STR(pci_enable_device) },
+	{ 0xefd71c90, __VMLINUX_SYMBOL_STR(pci_ioremap_bar) },
+	{ 0x8c364fa2, __VMLINUX_SYMBOL_STR(pci_request_region) },
+	{ 0x858ed873, __VMLINUX_SYMBOL_STR(pci_enable_device) },
 	{ 0xbdfb6dbb, __VMLINUX_SYMBOL_STR(__fentry__) },
 };
 
@@ -42,4 +42,4 @@ __attribute__((section(".modinfo"))) =
 
 MODULE_ALIAS("pci:v00001234d000011E8sv*sd*bc*sc*i*");
 
-MODULE_INFO(srcversion, "CAD9F5205DB109767263838");
+MODULE_INFO(srcversion, "009C8E047230B509A9BC0FA");

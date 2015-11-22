@@ -1,0 +1,159 @@
+From f81bb665f22e874c894ab915ad30b22b6d3597d9 Mon Sep 17 00:00:00 2001
+From: jkasztur <jkasztur@redhat.com>
+Date: Thu, 5 Nov 2015 01:46:28 +0100
+Subject: [PATCH] HW5 - allocation, buffer
+
+Jan Kasztura 422563
+---
+ sandbox/pb173.c | 86 ++++++++++++++++++++++++++++++++-------------------------
+ 1 file changed, 48 insertions(+), 38 deletions(-)
+ mode change 100644 => 100755 sandbox/pb173.c
+
+diff --git a/sandbox/pb173.c b/sandbox/pb173.c
+old mode 100644
+new mode 100755
+index fc2369c..45cc9bc
+--- a/sandbox/pb173.c
++++ b/sandbox/pb173.c
+@@ -11,74 +11,73 @@
+ #include <linux/mutex.h>
+ #include <linux/atomic.h>
+ #include <linux/delay.h>
++#include <linux/mm.h>
++#include <linux/io.h>
+ 
++int num_of_pages;
+ int read_count;
+ struct dentry *mydir;
+ atomic_t instance_counter;
+ 
++void *main_buffer;
++
+ char hw4_buffer[128];
+ int hw4_num_ptr;
+ DEFINE_MUTEX(write_lock_mutex);
+ 
+ int my_open(struct inode *inode, struct file *filp)
+ {
+-	if ((filp->f_mode & FMODE_WRITE) != 0) {
+-		mutex_lock(&write_lock_mutex);
+-		pr_info("Opening in write mode...");
+-	} else {
+-		pr_info("Opening...");
+-	}
++	pr_info("Opening...");
+ 	atomic_inc(&instance_counter);
+ 	return 0;
+ }
+ 
+ int my_release(struct inode *inode, struct file *filp)
+ {
+-	if ((filp->f_mode & FMODE_WRITE) != 0) {
+-		mutex_unlock(&write_lock_mutex);
+-		pr_info("Releasing in read mode...");
+-	} else {
+-		pr_info("Releasing...");
+-	}
++	pr_info("Releasing...");
+ 	atomic_dec(&instance_counter);
+ 	return 0;
+ }
+-
+ ssize_t my_read(struct file *filp, char __user *buf, size_t count,
+ loff_t *offp)
+ {
+-	atomic_t char_count;
+-	atomic_t cur_ptr;
+-	char msg[] = "Ahoj\0";
+-	char temp;
+-	int ret;
++	return simple_read_from_buffer(buf, count, offp, main_buffer,
++		20*1024*1024);
++}
+ 
+-	atomic_set(&char_count, read_count);
+-	atomic_set(&cur_ptr, 0);
+-	temp = msg[atomic_read(&cur_ptr)];
+-	while (atomic_read(&char_count) > 0 && temp != '\0') {
+-		pr_info("%c", temp);
+-		ret = copy_to_user(buf, &temp, sizeof(temp));
+-		if (ret != 0)
+-			pr_warn("Error when copying to user, ret: %d\n", ret);
+-		atomic_inc(&cur_ptr);
+-		atomic_dec(&char_count);
+-		temp = msg[atomic_read(&cur_ptr)];
+-	}
+-	return 0;
++/*was not in my version of kernel*/
++ssize_t my_simple_write_to_buffer(void *to, size_t available, loff_t *ppos,
++	const void __user *from, size_t count)
++{
++	loff_t pos = *ppos;
++	size_t res;
++
++	if (pos < 0)
++		return -EINVAL;
++	if (pos >= available || !count)
++		return 0;
++	if (count > available - pos)
++		count = available - pos;
++	res = copy_from_user(to + pos, from, count);
++	if (res == count)
++		return -EFAULT;
++	count -= res;
++	*ppos = pos + count;
++	return count;
+ }
+ 
+ ssize_t my_write(struct file *filp, const char __user *buf, size_t count,
+ loff_t *offp)
+ {
+-	char string[count + 1];
+-	int var = copy_from_user(string, buf, count);
++	int ret = 0;
+ 
+-	if (var != 0)
+-		return -EFAULT;
+-	string[count] = '\0';
+-	pr_info("%s\n", string);
+-	return count;
++	if ((filp->f_mode & FMODE_WRITE) != 0)
++		mutex_lock(&write_lock_mutex);
++	ret = my_simple_write_to_buffer(main_buffer, 20*1024*1024,
++		offp, buf, count);
++	if ((filp->f_mode & FMODE_WRITE) != 0)
++		mutex_unlock(&write_lock_mutex);
++	return ret;
+ }
+ 
+ long my_unlocked_ioctl(struct file *filp, unsigned int cmd,
+@@ -207,8 +206,18 @@ struct miscdevice hw4_read_misc = {
+ static int my_init(void)
+ {
+ 	u16 value = atomic_read(&instance_counter);
++	int i;
+ 
+ 	pr_info("Adding module\n");
++	main_buffer = vzalloc(20*1024*1024);
++	num_of_pages = (20*1024*1024) / PAGE_SIZE;
++	for (i = 0; i < num_of_pages; i++) {
++		snprintf(main_buffer + (PAGE_SIZE * i), 31 * sizeof(char),
++			"%p: %lx\n", main_buffer + (PAGE_SIZE * i),
++			(unsigned int long)virt_to_phys
++			(main_buffer + (PAGE_SIZE * i)));
++		pr_info("%s", (char *)main_buffer + (PAGE_SIZE * i));
++	}
+ 	alloc_chrdev_region(&device_dev, 0, 10, "my_awesome_device");
+ 	pr_info("Major: %d\n", MAJOR(device_dev));
+ 	pr_info("Minor: %d\n", MINOR(device_dev));
+@@ -238,6 +247,7 @@ static void my_exit(void)
+ 	misc_deregister(&hw4_write_misc);
+ 	misc_deregister(&hw4_read_misc);
+ 	debugfs_remove_recursive(mydir);
++	vfree(main_buffer);
+ 	pr_info("Removing module\n");
+ }
+ 
+-- 
+2.1.4
+

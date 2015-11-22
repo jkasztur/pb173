@@ -1,0 +1,113 @@
+From 8fe118c14fa0c6b5049bd9df5ea3966cd69bf5cc Mon Sep 17 00:00:00 2001
+From: jkasztur <jkasztur@redhat.com>
+Date: Thu, 1 Oct 2015 00:05:25 +0200
+Subject: [PATCH] Homework 01
+
+Module that logs various addresses
+
+Jan Kasztura 422563
+---
+ 01/Makefile     |  3 ++-
+ 01/helpthings.c | 28 ++++++++++++++++++++++++++++
+ 01/helpthings.h |  5 +++++
+ 01/pb173.c      | 13 +++++++++++++
+ 4 files changed, 48 insertions(+), 1 deletion(-)
+ create mode 100644 01/helpthings.c
+ create mode 100644 01/helpthings.h
+
+diff --git a/01/Makefile b/01/Makefile
+index f4f2760..0b621d7 100644
+--- a/01/Makefile
++++ b/01/Makefile
+@@ -1,7 +1,8 @@
+ KDIR=/lib/modules/$(shell uname -r)/build
+ KBUILD=$(MAKE) -C $(KDIR) M=$(PWD)
+ 
+-obj-m := pb173.o
++obj-m := mainmodule.o
++mainmodule-y := pb173.o helpthings.o
+ 
+ modules:
+ 	$(KBUILD) modules
+diff --git a/01/helpthings.c b/01/helpthings.c
+new file mode 100644
+index 0000000..c629369
+--- /dev/null
++++ b/01/helpthings.c
+@@ -0,0 +1,28 @@
++#include <linux/module.h>
++#include <linux/slab.h>
++#include <linux/jiffies.h>
++#include <linux/device.h>
++
++void pointless_function(void)
++{
++	int num = 2;
++
++	num++;
++}
++
++void print_things(void)
++{
++	void *tmp = kmalloc(1000, GFP_KERNEL);
++	int num = 5;
++
++	if (tmp)
++		pr_info("Malloc variable address: %p\n", &tmp);
++	kfree(tmp);
++	pr_info("Stack variable address: %p\n", &num);
++	pr_info("Jiffies address: %p\n", &jiffies);
++	pr_info("My function address: %p\n", pointless_function);
++	pr_info("Other function address: %p\n", bus_register);
++	pr_info("__builtin_return_address(0): %pF\n",
++		__builtin_return_address(0));
++}
++
+diff --git a/01/helpthings.h b/01/helpthings.h
+new file mode 100644
+index 0000000..472d73e
+--- /dev/null
++++ b/01/helpthings.h
+@@ -0,0 +1,5 @@
++#ifndef HELPTHINGS_H
++#define HELPTHINGS_H
++void print_things(void);
++void pointless_function(void);
++#endif
+diff --git a/01/pb173.c b/01/pb173.c
+index f2e99cb..461b82e 100644
+--- a/01/pb173.c
++++ b/01/pb173.c
+@@ -1,16 +1,29 @@
+ #include <linux/module.h>
++#include <linux/slab.h>
++#include "helpthings.h"
++
+ 
+ static int my_init(void)
+ {
+ 	pr_info("HELLO WORLD\n");
++	print_things();
+ 	return 0;
+ }
+ 
+ static void my_exit(void)
+ {
++	void *mem = kmalloc(1000, GFP_KERNEL);
++
++	if (mem) {
++		strcpy(mem, "Bye");
++		pr_info("%s", (char *)mem);
++	}
++	kfree(mem);
+ }
+ 
++
+ module_init(my_init);
+ module_exit(my_exit);
+ 
+ MODULE_LICENSE("GPL");
++
+-- 
+2.1.4
+

@@ -1,0 +1,28 @@
+From 11a00633f3d18a42d215d4d5c55fcc151d9b58ee Mon Sep 17 00:00:00 2001
+From: jkasztur <jkasztur@redhat.com>
+Date: Thu, 8 Oct 2015 00:04:38 +0200
+Subject: [PATCH 2/2] Homework 2
+
+Implementaion of ioctl and the rest
+- test script runs with option "script /dev/mydevice 100 num 1"
+
+Jan Kasztura 422563
+---
+ 02/pb173.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/02/pb173.c b/02/pb173.c
+index 745191d..04d2ade 100644
+--- a/02/pb173.c
++++ b/02/pb173.c
+@@ -5,7 +5,6 @@
+ #include <linux/cdev.h>
+ #include <linux/miscdevice.h>
+ 
+-
+ int read_count;
+ 
+ int my_open(struct inode *inode, struct file *filp)
+-- 
+2.1.4
+

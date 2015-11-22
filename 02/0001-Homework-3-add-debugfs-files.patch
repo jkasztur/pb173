@@ -1,0 +1,133 @@
+From 84f5846e51f059a20de8c02279c68ac45f76052a Mon Sep 17 00:00:00 2001
+From: jkasztur <jkasztur@redhat.com>
+Date: Thu, 15 Oct 2015 00:02:14 +0200
+Subject: [PATCH] Homework 3 - add debugfs files
+
+added instance_counter and module_core_file debugfs files
+
+Jan Kasztura 422563
+---
+ 02/pb173.c | 32 +++++++++++++++++++++++++++++++-
+ 03/pb173.c | 24 +++++++++++++-----------
+ 2 files changed, 44 insertions(+), 12 deletions(-)
+
+diff --git a/02/pb173.c b/02/pb173.c
+index 04d2ade..0436478 100644
+--- a/02/pb173.c
++++ b/02/pb173.c
+@@ -4,19 +4,26 @@
+ #include <linux/fs.h>
+ #include <linux/cdev.h>
+ #include <linux/miscdevice.h>
++#include <linux/debugfs.h>
++#include <linux/kernel.h>
++#include <linux/bug.h>
++#include <linux/stat.h>
+ 
+ int read_count;
++struct dentry *mydir;
++u16 instance_counter;
+ 
+ int my_open(struct inode *inode, struct file *filp)
+ {
+-
+ 	pr_info("Opening..");
++	instance_counter++;
+ 	return 0;
+ }
+ 
+ int my_release(struct inode *inode, struct file *filp)
+ {
+ 	pr_info("Releasing..");
++	instance_counter--;
+ 	return 0;
+ }
+ 
+@@ -97,6 +104,19 @@ struct miscdevice my_misc_device = {
+ 
+ struct cdev my_cdev;
+ 
++/*--------------------------HW03--------------------------*/
++
++ssize_t debugfs_read(struct file *file, char __user *buf, size_t count,
++loff_t *offp)
++{
++	return simple_read_from_buffer(buf, count, offp,
++		THIS_MODULE->module_core, THIS_MODULE->core_text_size);
++}
++
++const struct file_operations debugfs_fops = {
++	.read = debugfs_read,
++};
++
+ static int my_init(void)
+ {
+ 	pr_info("Adding module\n");
+@@ -108,6 +128,15 @@ static int my_init(void)
+ 	cdev_add(&my_cdev, device_dev, 10);
+ 	misc_register(&my_misc_device);
+ 	read_count = 4;
++
++	instance_counter = 0;
++	print_hex_dump_bytes("raw data: ", DUMP_PREFIX_NONE,
++		THIS_MODULE->module_core, THIS_MODULE->core_text_size);
++	mydir = debugfs_create_dir("my_awesome_dir", NULL);
++	debugfs_create_u16("inst_counter", S_IRWXU, mydir, &instance_counter);
++	debugfs_create_file("module_core_file", S_IRWXU, mydir, NULL,
++		&debugfs_fops);
++
+ 	return 0;
+ }
+ 
+@@ -116,6 +145,7 @@ static void my_exit(void)
+ 	cdev_del(&my_cdev);
+ 	unregister_chrdev_region(device_dev, 10);
+ 	misc_deregister(&my_misc_device);
++	debugfs_remove_recursive(mydir);
+ 	pr_info("Removing module\n");
+ }
+ 
+diff --git a/03/pb173.c b/03/pb173.c
+index 5a330ff..212c4aa 100644
+--- a/03/pb173.c
++++ b/03/pb173.c
+@@ -1,23 +1,25 @@
+ #include <linux/kernel.h>
+ #include <linux/module.h>
++#include <linux/bug.h>
++#include <linux/debugfs.h>
++#include <linux/stat.h>
++
++struct dentry* mydir;
++int count = 0;
+ 
+ static int my_init(void)
+ {
+-#define prn(x) printk(x "level " #x " %c\n", (x)[1]);
+-	prn(KERN_EMERG);
+-	prn(KERN_ALERT);
+-	prn(KERN_CRIT);
+-	prn(KERN_ERR);
+-	prn(KERN_WARNING);
+-	prn(KERN_NOTICE);
+-	prn(KERN_INFO);
+-	prn(KERN_DEBUG);
+-
+-	return -EIO;
++	
++	
++	u16 value = 5;
++	mydir = debugfs_create_dir("myawesomedir", NULL);
++	debugfs_create_u16("mynewfile",S_IRWXU,mydir,&value);
++	return 0;
+ }
+ 
+ static void my_exit(void)
+ {
++	debugfs_remove_recursive(mydir);
+ }
+ 
+ module_init(my_init);
+-- 
+2.1.4
+

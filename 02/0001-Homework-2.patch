@@ -1,0 +1,155 @@
+From 42bb01eeafffa2daf0f10410c3ab3e9d2e7684d5 Mon Sep 17 00:00:00 2001
+From: jkasztur <jkasztur@redhat.com>
+Date: Wed, 7 Oct 2015 23:59:42 +0200
+Subject: [PATCH 1/2] Homework 2
+
+Implementaion of ioctl and the rest
+- test script runs with option "script /dev/mydevice 100 num 1"
+
+Jan Kasztura 42563
+---
+ 02/pb173.c | 119 +++++++++++++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 108 insertions(+), 11 deletions(-)
+
+diff --git a/02/pb173.c b/02/pb173.c
+index c403994..745191d 100644
+--- a/02/pb173.c
++++ b/02/pb173.c
+@@ -1,26 +1,123 @@
+ #include <linux/module.h>
+ #include <linux/sched.h>
+ #include <linux/uaccess.h>
++#include <linux/fs.h>
++#include <linux/cdev.h>
++#include <linux/miscdevice.h>
+ 
+-static int my_init(void)
++
++int read_count;
++
++int my_open(struct inode *inode, struct file *filp)
+ {
+-	char buf[100];
+-	void *copy_to;
+ 
+-	copy_to = NULL;
+-	printk(KERN_INFO "copy to NULL: %d\n",
+-			(int)copy_to_user(copy_to, buf, sizeof(buf)));
++	pr_info("Opening..");
++	return 0;
++}
++
++int my_release(struct inode *inode, struct file *filp)
++{
++	pr_info("Releasing..");
++	return 0;
++}
++
++ssize_t my_read(struct file *filp, char __user *buf, size_t count,
++loff_t *offp)
++{
++	int char_count = read_count;
++	int cur_ptr = 0;
++	char msg[] = "Ahoj\0";
++	char temp = msg[cur_ptr];
++
++	while (char_count > 0 && temp != '\0') {
++		pr_info("%c", temp);
++		cur_ptr++;
++		char_count--;
++		temp = msg[cur_ptr];
++	}
++	pr_info("\n");
++	return 0;
++}
++
++ssize_t my_write(struct file *filp, const char __user *buf, size_t count,
++loff_t *offp)
++{
++	char string[count + 1];
++	int var = copy_from_user(string, buf, count);
+ 
+-	copy_to = current;
+-	printk(KERN_INFO "copy to kernel structures: %d\n",
+-			(int)copy_to_user(copy_to, buf, sizeof(buf)));
++	if (var != 0)
++		return -EFAULT;
++	string[count] = '\0';
++	pr_info("%s\n", string);
++	return count;
++}
++
++long my_unlocked_ioctl(struct file *filp, unsigned int cmd,
++unsigned long arg)
++{
++	int ret = 0;
++
++	switch (cmd) {
++	case 100:
++		ret = copy_from_user(&read_count, (int *)arg,
++			sizeof(int));
++		if (ret != 0) {
++			pr_warn("Error when setting custom value, ret: %d\n"
++				, ret);
++		}
++		break;
++	case 200:
++		ret = copy_to_user((int *)arg,
++			&read_count, sizeof(int *));
++		if (ret != 0) {
++			pr_warn("Error when getting custom value, ret: %d\n"
++				, ret);
++		}
++		break;
++	}
++	return 0;
++}
++
++dev_t device_dev;
++dev_t misc_dev;
++
++const struct file_operations my_fops = {
++	.owner = THIS_MODULE,
++	.read = my_read,
++	.write = my_write,
++	.open = my_open,
++	.release = my_release,
++	.unlocked_ioctl = my_unlocked_ioctl,
++};
++
++struct miscdevice my_misc_device = {
++	.minor = MISC_DYNAMIC_MINOR,
++	.name = "my_awesome_misc_device",
++	.fops = &my_fops,
++};
++
++struct cdev my_cdev;
++
++static int my_init(void)
++{
++	pr_info("Adding module\n");
+ 
+-	/* this way it won't load */
+-	return -EIO;
++	alloc_chrdev_region(&device_dev, 0, 10, "my_awesome_device");
++	pr_info("Major: %d\n", MAJOR(device_dev));
++	pr_info("Minor: %d\n", MINOR(device_dev));
++	cdev_init(&my_cdev, &my_fops);
++	cdev_add(&my_cdev, device_dev, 10);
++	misc_register(&my_misc_device);
++	read_count = 4;
++	return 0;
+ }
+ 
+ static void my_exit(void)
+ {
++	cdev_del(&my_cdev);
++	unregister_chrdev_region(device_dev, 10);
++	misc_deregister(&my_misc_device);
++	pr_info("Removing module\n");
+ }
+ 
+ module_init(my_init);
+-- 
+2.1.4
+

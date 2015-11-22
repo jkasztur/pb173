@@ -1,0 +1,1 @@
+cmd_/home/jkasztur/repos/asd/pb173/uloha7/pb173.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /home/jkasztur/repos/asd/pb173/uloha7/pb173.ko /home/jkasztur/repos/asd/pb173/uloha7/pb173.o /home/jkasztur/repos/asd/pb173/uloha7/pb173.mod.o

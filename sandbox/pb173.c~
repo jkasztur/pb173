@@ -1,0 +1,77 @@
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/io.h>
+#include <linux/mm.h>
+
+// FACP 000000003fff00f0 000F4
+void* buffer;
+static int my_init(void)
+{
+	/*
+	u32 *virt = ioremap_cache(0x000000003fff00f0, 8);
+	pr_info("\n");
+	pr_info("adresa: %p", virt);
+	pr_info("signatura: %4s", (char*)virt);
+	pr_info("delka tab: %x", virt[1]);
+	iounmap(virt);*/
+/*
+	void *map;
+	struct page *page;
+	phys_addr_t phys;
+	u32 *virt = (u32*)__get_free_page(GFP_KERNEL);
+	memcpy(virt, "Ahoj\0", strlen("Ahoj\0") * sizeof(char));
+	phys = virt_to_phys(virt);
+	page = virt_to_page(virt);
+	SetPageReserved(page);
+	map = ioremap(phys, strlen("Ahoj") * sizeof(char));
+	pr_info("virt: %p", virt);
+	pr_info("phys: %lx", (long unsigned int)phys);
+	pr_info("page: %p", page);
+	pr_info("map:  %p", map );
+	pr_info("pfn:  %lx", page_to_pfn(page));
+
+	pr_info("virtobsah: %s", (char*)virt);
+	pr_info("mapobsah : %s", (char*)map);
+	
+	iounmap(virt);
+	ClearPageReserved(page);
+	free_page((long unsigned int)virt);
+	
+	
+	struct page *page;
+	int i ;
+	void* pamet = kmalloc(PAGE_SIZE * 32, GFP_KERNEL);
+	for(i = 0; i< 32; i++)
+	{
+		page = virt_to_page(pamet+(PAGE_SIZE * i));
+		pr_info("%d : %p %lx", i, pamet+(PAGE_SIZE * i), page_to_pfn(page));
+
+	}*/
+	int i;
+	int page_count;
+	char *string;
+	buffer = kzalloc(20*1024*1024, GFP_KERNEL);
+	page_count = (20*1024*1024)/ PAGE_SIZE;
+	for(i = 0; i < page_count; i++)
+	{
+		memcpy(buffer + (PAGE_SIZE * i),"%p : %lx", buffer + (PAGE_SIZE * i),
+			virt_to_phys(buffer + (PAGE_SIZE * i)),sizeof("%p : %lx", buffer + (PAGE_SIZE * i),
+			virt_to_phys(buffer + (PAGE_SIZE * i))));
+		pr_info("%p : %lx", buffer + (PAGE_SIZE * i),
+			virt_to_phys(buffer + (PAGE_SIZE * i)));
+	}
+
+
+	
+	return 0;
+}
+
+static void my_exit(void)
+{
+	kfree(bufer)
+}
+
+module_init(my_init);
+module_exit(my_exit);
+
+MODULE_LICENSE("GPL");

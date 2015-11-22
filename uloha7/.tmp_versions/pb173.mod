@@ -1,2 +1,2 @@
-/home/jkasztur/repos/asd/pb173/uloha7/pb173.ko
-/home/jkasztur/repos/asd/pb173/uloha7/pb173.o
+/home/jkasztur/repos/aaa/uloha7/pb173.ko
+/home/jkasztur/repos/aaa/uloha7/pb173.o

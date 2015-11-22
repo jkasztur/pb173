@@ -1,6 +1,7 @@
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/delay.h>
+
 #include <linux/pci.h>
 #include <linux/list.h>
 
@@ -57,6 +58,8 @@ int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	pci_enable_device(dev);
 	pci_request_region(dev, 0, "my_bar");
+	pr_info("%p \n", pci_ioremap_bar(dev, 0));
+	
 	return 0;
 }
 
@@ -67,7 +70,7 @@ void my_remove(struct pci_dev *dev)
 }
 
 struct pci_device_id my_table[] = {
-{ PCI_DEVICE(0x8086, 0x9ca0) },//TODO change to real values
+{ PCI_DEVICE(0x1234, 0x11e8) },//TODO change to real values
 { 0, }
 };
 
@@ -94,7 +97,7 @@ static int my_init(void)
 		pci_dev_get(pdev);
 		list_add_tail(&temp->list, &my_head);
 	}
-	pci_register_driver(my_pci_driver);
+	pci_register_driver(&my_pci_driver);
 	return 0;
 }
 
@@ -124,7 +127,7 @@ static void my_exit(void)
 		list_del(temp);
 		kfree(temp);
 	}
-	pci_unregister_driver(my_pci_driver);
+	pci_unregister_driver(&my_pci_driver);
 	pr_info("Removing module\n");
 }
 

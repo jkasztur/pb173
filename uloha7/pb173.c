@@ -5,6 +5,7 @@
 #include <linux/pci.h>
 #include <linux/list.h>
 
+void *virt_address;
 
 struct my_list {
 	struct list_head list;
@@ -56,10 +57,19 @@ int compare_with_system(struct pci_dev *other)
 
 int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
-	pci_enable_device(dev);
-	pci_request_region(dev, 0, "my_bar");
-	pr_info("%p \n", pci_ioremap_bar(dev, 0));
-	
+	int temp;
+	int ret;
+	ret = pci_enable_device(dev);
+	if(ret != 0)
+		return -EFAULT;
+	ret = pci_request_region(dev, 0, "my_bar");
+	if(ret != 0)
+		return -EFAULT;
+	pr_info("phys_address: %lx", dev->rom);
+	virt_address = pci_ioremap_bar(dev, 0);
+	pr_info("virt_address : %p", &virt_address);
+	temp = readl(virt_address);
+	pr_info("%p",&temp);
 	return 0;
 }
 
@@ -87,6 +97,7 @@ static int my_init(void)
 {
 	struct pci_dev *pdev = NULL;
 	struct my_list *temp;
+	int ret;
 	pr_info("Adding module\n");
 	INIT_LIST_HEAD(&my_head);
 
@@ -97,7 +108,9 @@ static int my_init(void)
 		pci_dev_get(pdev);
 		list_add_tail(&temp->list, &my_head);
 	}
-	pci_register_driver(&my_pci_driver);
+	ret = pci_register_driver(&my_pci_driver);
+	if(ret != 0)
+		return -EFAULT;
 	return 0;
 }
 

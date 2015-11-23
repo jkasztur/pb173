@@ -55,9 +55,20 @@ int compare_with_system(struct pci_dev *other)
 	return 0;
 }
 
+	
+void compute_factorial(long unsigned int n)
+{
+	unsigned int temp;
+	writel(n, virt_address + 0x0008);
+	while((readl(virt_address + 0x0020) & 0x1) == 0x1)
+		pr_info("computing...\n");
+	temp = readl(virt_address + 0x0008);
+	pr_info("factorial of %d is %u\n",(int)n,temp);
+}
+
 int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
-	int temp;
+	long unsigned int temp;
 	int ret;
 	ret = pci_enable_device(dev);
 	if(ret != 0)
@@ -65,11 +76,18 @@ int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	ret = pci_request_region(dev, 0, "my_bar");
 	if(ret != 0)
 		return -EFAULT;
-	//pr_info("phys_address: %lx", dev->rom);
 	virt_address = pci_ioremap_bar(dev, 0);
 	pr_info("virt_address : %p", &virt_address);
 	temp = readl(virt_address);
-	pr_info("Major: %u, minor: %u\n", *(char *) &temp, *((char *) &temp + 1));
+	pr_info("Major: %u, minor: %u\n", *((char *) &temp + 3), *((char *) &temp + 2));
+	pr_info("id+revision: %lx", temp);
+	writel(0x1000, virt_address + 0x0004);
+	temp = readl(virt_address + 0x0004);	
+	writel(temp, virt_address + 0x0004);
+	pr_info("double invert: 1000 is %lx", temp);
+	compute_factorial(0x3);
+	compute_factorial(0x4);
+	compute_factorial(0x5);
 	return 0;
 }
 

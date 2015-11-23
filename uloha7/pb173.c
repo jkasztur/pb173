@@ -57,7 +57,7 @@ int compare_with_system(struct pci_dev *other)
 
 int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
-	int temp;
+	long unsigned int temp;
 	int ret;
 	ret = pci_enable_device(dev);
 	if(ret != 0)
@@ -69,12 +69,19 @@ int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	virt_address = pci_ioremap_bar(dev, 0);
 	pr_info("virt_address : %p", &virt_address);
 	temp = readl(virt_address);
-	pr_info("Major: %u, minor: %u\n", *(char *) &temp, *((char *) &temp + 1));
+	pr_info("Major: %u, minor: %u\n", *((char *) &temp+3), *((char *) &temp + 2));
+	pr_info("id+revision: %lx\n",temp);
+	writel(0x1000,virt_address + 0x0004);
+	temp = readl(virt_address + 0x0004);
+	writel(temp, virt_address + 0x0004);
+	temp = readl(virt_address + 0x0004);
+	pr_info("double inverted 0x1000 is %lx\n", temp);
 	return 0;
 }
 
 void my_remove(struct pci_dev *dev)
 {
+	pci_iounmap(dev, virt_address);
 	pci_release_region(dev, 0);
 	pci_disable_device(dev);
 }

@@ -65,11 +65,11 @@ int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	ret = pci_request_region(dev, 0, "my_bar");
 	if(ret != 0)
 		return -EFAULT;
-	pr_info("phys_address: %lx", dev->rom);
+	//pr_info("phys_address: %lx", dev->rom);
 	virt_address = pci_ioremap_bar(dev, 0);
 	pr_info("virt_address : %p", &virt_address);
 	temp = readl(virt_address);
-	pr_info("%p",&temp);
+	pr_info("Major: %u, minor: %u\n", *(char *) &temp, *((char *) &temp + 1));
 	return 0;
 }
 

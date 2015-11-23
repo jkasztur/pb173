@@ -79,6 +79,7 @@ int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	virt_address = pci_ioremap_bar(dev, 0);
 	pr_info("virt_address : %p", &virt_address);
 	temp = readl(virt_address);
+
 	pr_info("Major: %u, minor: %u\n", *((char *) &temp + 3), *((char *) &temp + 2));
 	pr_info("id+revision: %lx", temp);
 	writel(0x1000, virt_address + 0x0004);
@@ -88,17 +89,19 @@ int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	compute_factorial(0x3);
 	compute_factorial(0x4);
 	compute_factorial(0x5);
+
 	return 0;
 }
 
 void my_remove(struct pci_dev *dev)
 {
+	pci_iounmap(dev, virt_address);
 	pci_release_region(dev, 0);
 	pci_disable_device(dev);
 }
 
 struct pci_device_id my_table[] = {
-{ PCI_DEVICE(0x1234, 0x11e8) },//TODO change to real values
+{ PCI_DEVICE(0x1234, 0x11e8) },
 { 0, }
 };
 

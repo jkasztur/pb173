@@ -13,7 +13,7 @@ void *virt_address;
 void *irq_id;
 static void generate_intr(unsigned long data);
 
-DEFINE_TIMER(my_timer,generate_intr,0,0);
+DEFINE_TIMER(my_timer, generate_intr, 0, 0);
 
 struct my_list {
 	struct list_head list;
@@ -77,10 +77,10 @@ void compute_factorial(unsigned long int n)
 static irqreturn_t my_handler(int irq, void *data)
 {
 	unsigned long int temp;
+
 	temp = readl(virt_address + RAISED_INTR);
 	pr_info("intr status: %lx\n", temp);
-	if(temp != 0x0)
-	{
+	if (temp != 0x0) {
 		writel(temp, virt_address + ACK_INTR);
 		return IRQ_HANDLED;
 	}

@@ -1,9 +1,10 @@
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/delay.h>
-
+#include <linux/dma-mapping.h>
 #include <linux/pci.h>
 #include <linux/list.h>
+#include <linux/string.h>
 
 void *virt_address;
 
@@ -66,11 +67,18 @@ void compute_factorial(long unsigned int n)
 	pr_info("factorial of %d is %u\n",(int)n,temp);
 }
 
+dma_addr_t dma;
+char *dma_virt;
+char *buffer;
 int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	long unsigned int temp;
 	int ret;
+	dma_addr_t dma;
 	ret = pci_enable_device(dev);
+	
+	//buffer = kmalloc(20, GFP_KERNEL);
+	//strcpy(buffer, "0123456789");
 	if(ret != 0)
 		return -EFAULT;
 	ret = pci_request_region(dev, 0, "my_bar");
@@ -89,12 +97,37 @@ int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	compute_factorial(0x3);
 	compute_factorial(0x4);
 	compute_factorial(0x5);
-
+	ret = pci_set_dma_mask(dev, DMA_BIT_MASK(32));
+	if(ret != 0)
+		return -EFAULT;
+	ret = pci_set_consistent_dma_mask(dev, DMA_BIT_MASK(32));
+	pci_set_master(dev);
+	dma_virt = dma_alloc_coherent(&dev->dev, PAGE_SIZE, &dma, GFP_KERNEL);
+	strcpy(dma_virt, "0123456789");
+	pr_info("dma: %pad", &dma);
+	pr_info("virtual: %p", dma_virt);
+	pr_info("virt to phys: %llx",(unsigned long long)virt_to_phys(dma_virt));
+	
+	writel(dma, virt_address + 0x0080);
+	writel(0x40000, virt_address + 0x0084);
+	writel(0x10, virt_address + 0x0088);
+	writel(1, virt_address + 0x008c);
+	while((readl(virt_address + 0x008c) & 0x1) == 0x1)
+		pr_info("transfering...\n");
+	pr_info("done\n");
+	
+	writel(0x40000, virt_address + 0x0080);
+	writel(dma + 10, virt_address + 0x0084);
+	writel(3, virt_address + 0x008c);
+	while((readl(virt_address + 0x008c) & 0x1) == 0x1)
+		pr_info("transfering second...\n");
+	pr_info("retezec: %s", dma_virt + 10);
 	return 0;
 }
 
 void my_remove(struct pci_dev *dev)
 {
+	dma_free_coherent(&dev->dev, PAGE_SIZE, dma_virt, dma);
 	pci_iounmap(dev, virt_address);
 	pci_release_region(dev, 0);
 	pci_disable_device(dev);

@@ -150,7 +150,7 @@ int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	writel(EDU_MEMORY, DEST_ADDRESS);
 	writel(10, TRANSFER_COUNT);
 	writel(1, CMD_REG);
-//	temp = readl(CMD_REG);
+	
 	while(readl(CMD_REG) & 1)
 	{
 		pr_info("transporting %d, cmd_reg: %u\n", wait_count, readl(CMD_REG));

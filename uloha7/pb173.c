@@ -5,7 +5,19 @@
 #include <linux/pci.h>
 #include <linux/list.h>
 #include <linux/string.h>
+#include <linux/interrupt.h>
 
+#define RAISED_INTR (virt_address + 0x0024)
+#define RAISE_INTR (virt_address + 0x0060)
+#define ACK_INTR (virt_address + 0x0064)
+#define SOURCE_ADDRESS (virt_address + 0x0080)
+#define DEST_ADDRESS (virt_address + 0x0088)
+#define TRANSFER_COUNT (virt_address + 0x0090)
+#define CMD_REG (virt_address + 0x0098)
+#define EDU_MEMORY 0x40000
+#define DMA_ADDRESS ((long long unsigned int) dma_virt)
+
+void *irq_id;
 void *virt_address;
 
 struct my_list {
@@ -70,15 +82,38 @@ void compute_factorial(long unsigned int n)
 dma_addr_t dma;
 char *dma_virt;
 char *buffer;
+/*
+void dma_intr_tasklet(unsigned long data)
+{
+	pr_info("retezec +20: %s",(char*)(dma_virt + 20));
+}
+
+DECLARE_TASKLET(my_tasklet, dma_intr_tasklet, 0);
+
+static irqreturn_t intq_handler(int irq, void *data)
+{
+	unsigned long int temp;
+
+	temp = readl(RAISED_INTR);
+	if(temp != 0)
+	{
+		pr_info("intr status: %lx", temp);
+		tasklet_schedule(&my_tasklet);
+		writel(temp, ACK_INTR);
+		return IRQ_HANDLED;
+	}
+	return IRQ_NONE;
+}
+*/
+
 int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	long unsigned int temp;
 	int ret;
-	dma_addr_t dma;
+	int wait_count = 100;
+
 	ret = pci_enable_device(dev);
 	
-	//buffer = kmalloc(20, GFP_KERNEL);
-	//strcpy(buffer, "0123456789");
 	if(ret != 0)
 		return -EFAULT;
 	ret = pci_request_region(dev, 0, "my_bar");
@@ -87,16 +122,18 @@ int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	virt_address = pci_ioremap_bar(dev, 0);
 	pr_info("virt_address : %p", &virt_address);
 	temp = readl(virt_address);
-
+	/* Testing EDU device. */
 	pr_info("Major: %u, minor: %u\n", *((char *) &temp + 3), *((char *) &temp + 2));
 	pr_info("id+revision: %lx", temp);
 	writel(0x1000, virt_address + 0x0004);
 	temp = readl(virt_address + 0x0004);	
 	writel(temp, virt_address + 0x0004);
 	pr_info("double invert: 1000 is %lx", temp);
+	/* Compute factorials. */
 	compute_factorial(0x3);
 	compute_factorial(0x4);
 	compute_factorial(0x5);
+	/* Prepare DMA. */
 	ret = pci_set_dma_mask(dev, DMA_BIT_MASK(32));
 	if(ret != 0)
 		return -EFAULT;
@@ -107,27 +144,62 @@ int my_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	pr_info("dma: %pad", &dma);
 	pr_info("virtual: %p", dma_virt);
 	pr_info("virt to phys: %llx",(unsigned long long)virt_to_phys(dma_virt));
-	
-	writel(dma, virt_address + 0x0080);
-	writel(0x40000, virt_address + 0x0084);
-	writel(0x10, virt_address + 0x0088);
-	writel(1, virt_address + 0x008c);
-	while((readl(virt_address + 0x008c) & 0x1) == 0x1)
-		pr_info("transfering...\n");
-	pr_info("done\n");
-	
-	writel(0x40000, virt_address + 0x0080);
-	writel(dma + 10, virt_address + 0x0084);
-	writel(3, virt_address + 0x008c);
-	while((readl(virt_address + 0x008c) & 0x1) == 0x1)
-		pr_info("transfering second...\n");
-	pr_info("retezec: %s", dma_virt + 10);
+
+	/* Transfer from DMA page to EDU. */
+	writel(DMA_ADDRESS, SOURCE_ADDRESS);
+	writel(EDU_MEMORY, DEST_ADDRESS);
+	writel(10, TRANSFER_COUNT);
+	writel(1, CMD_REG);
+//	temp = readl(CMD_REG);
+	while(readl(CMD_REG) & 1)
+	{
+		pr_info("transporting %d, cmd_reg: %u\n", wait_count, readl(CMD_REG));
+		if(wait_count < 0)
+		{
+			pr_info("First write failed.");
+			return -ETIME;
+		}
+		msleep(100);
+		wait_count--;
+	}
+	pr_info("done, cmd_reg: %u\n",readl(CMD_REG));
+
+	/* Transfer from EDU to DMA+10 */
+	writel(EDU_MEMORY, SOURCE_ADDRESS);
+	writel(DMA_ADDRESS +10 , DEST_ADDRESS);
+	writel(10, TRANSFER_COUNT);
+	writel(3, CMD_REG);
+	wait_count = 100;
+	while(readl(CMD_REG) & 1)
+	{
+		pr_info("transporting %d, cmd_reg: %u\n", wait_count, readl(CMD_REG));
+		if(wait_count < 0)
+		{
+			pr_info("Second write failed.");
+			return -ETIME;
+		}
+		msleep(100);
+		wait_count--;
+	}
+	pr_info("done, cmd_reg: %u\n",readl(CMD_REG));
+
+	pr_info("retezec after transfer: %s\n",(char*) dma_virt);
+	pr_info("retezec+10: %s\n",(char*)(dma_virt + 10));
+
+	/* Transfer from EDU to DMA+20 with RQINT when finished. */
+//	tasklet_schedule(&my_tasklet);
+//	writel(EDU_MEMORY, SOURCE_ADDRESS);
+//	writel((unsigned long long )(dma_virt + 20), DEST_ADDRESS);
+//	writel(0x10, TRANSFER_COUNT);
+//	writel(7, CMD_REG);
+//	ret = request_irq(dev->irq, intq_handler, IRQF_SHARED, "my_awesome_name", &irq_id);
 	return 0;
 }
 
 void my_remove(struct pci_dev *dev)
 {
 	dma_free_coherent(&dev->dev, PAGE_SIZE, dma_virt, dma);
+//	tasklet_kill(&my_tasklet);
 	pci_iounmap(dev, virt_address);
 	pci_release_region(dev, 0);
 	pci_disable_device(dev);
